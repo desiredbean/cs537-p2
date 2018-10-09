@@ -8,7 +8,7 @@
 #
 CC = gcc
 WARNING_FLAGS = -Wall -Wextra
-EXE = 537ps
+EXE = prodcomm
 SCAN_BUILD_DIR = scan-build-out
 
 all: main.o quote.o reader.o munch1.o munch2.o writer.o
