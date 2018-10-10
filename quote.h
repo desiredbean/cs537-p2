@@ -23,5 +23,24 @@
 #ifndef QUOTE
 #define QUOTE
 
+typedef struct{
+	char **strings;
+	int capacity;
+	int numElements;
+	int headIndex;
+	int tailIndex;
+	int enqueueCount;
+	int dequeueCount;
+	int enqueueBlockCount;
+	int dequeueBlockCount;
+}Queue;	
+
+Queue *CreateStringQueue(int size);
+
+void EnqueueString(Queue *q, char *string);
+
+char * DequeueString(Queue *q);
+
+void PrintQueueStats(Queue *q);
 
 #endif
