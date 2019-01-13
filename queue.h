@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Main File: main.c
-// This File: munch2.h
+// This File: queue.h
 // Other Files: main.c / queue.c / reader.c / munch1.c / munch2.c / writer.c / queue.h / reader.h / munch1.h / munch2.h / writer.h / makefile
 // Semester:         CS 537 Fall 2018
 //
@@ -20,9 +20,31 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef MUNCH2
-#define MUNCH2
+#ifndef QUEUE
+#define QUEUE
+#include <semaphore.h>
 
-void *munch2Strings(void *queues);
+typedef struct{
+	char **strings;
+	int capacity;
+	int numElements;
+	int headIndex;
+	int tailIndex;
+	int enqueueCount;
+	int dequeueCount;
+	int enqueueBlockCount;
+	int dequeueBlockCount;
+	sem_t enqueueReady;
+	sem_t dequeueReady;
+	sem_t mutex;
+}Queue;	
+
+Queue *CreateStringQueue(int size);
+
+void EnqueueString(Queue *q, char *string);
+
+char * DequeueString(Queue *q);
+
+void PrintQueueStats(Queue *q);
 
 #endif

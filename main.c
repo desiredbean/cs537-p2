@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Main File: main.c
 // This File: main.c
-// Other Files: main.c / quote.c / reader.c / munch1.c / munch2.c / writer.c / quote.h / reader.h / munch1.h / munch2.h / writer.h / makefile
+// Other Files: main.c / queue.c / reader.c / munch1.c / munch2.c / writer.c / queue.h / reader.h / munch1.h / munch2.h / writer.h / makefile
 // Semester:         CS 537 Fall 2018
 //
-// Author:           Ethan Lengfeld / William Pechous
-// Email:            elengfeld@wisc.edu / wpechous@wisc.edu
-// CS Login:         lengfeld / pechous
+// Author:           Ethan Lengfeld
+// Email:            elengfeld@wisc.edu
+// CS Login:         lengfeld
 //
 /////////////////////////// OTHER SOURCES OF HELP //////////////////////////////
 //                   fully acknowledge and credit all sources of help,
@@ -21,7 +21,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
-#include "quote.h"
+#include <pthread.h>
+#include <semaphore.h>
+#include "queue.h"
 #include "reader.h"
 #include "munch1.h"
 #include "munch2.h"
@@ -29,81 +31,96 @@
 
 const int QUEUE_SIZE = 10;
 
-// TODO REMOVE BEFORE SUBMISSION!
-void printQueue(Queue *queue){
-	//printf("The HEAD of queue is at element %d\n", queue->headIndex);
-	//printf("The TAIL of queue is at element %d\n", queue->tailIndex);
-	int pos = queue->headIndex;
-	for(int i = 0; i < queue->numElements; i++){
-		if(pos == queue->capacity){
-			pos=0;
-		}
-		printf("element %d = %s\n", pos, queue->strings[pos]);
-		pos++;
-	}
-	printf("-----------------------------------------\n-----------------------------------------\n");
-}
-
-// TODO REMOVE BEFORE SUBMISSION!
-void testQueueFunctionality(Queue *testQueue){
-	EnqueueString(testQueue, "apple");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "orange");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "rabbit");
-	printf("dequeued string = %s\n", DequeueString(testQueue));
-	EnqueueString(testQueue, "cold");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "turkey");
-	printf("dequeued string = %s\n", DequeueString(testQueue));
-	printQueue(testQueue);
-	printf("dequeued string = %s\n", DequeueString(testQueue));
-	EnqueueString(testQueue, "diet");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "queues are really interesting to code and can be difficult");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "blueberries are honestly the most swell berry that one could ever enjoy with a large smile on their pretty little noodle-head looking face");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "that last one was pretty long huh....");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "boi");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "final entry");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "let's get full again");
-	printQueue(testQueue);
-	EnqueueString(testQueue, "one more uhhhhhh");
-	printQueue(testQueue);
-	
-	// queue full message
-	EnqueueString(testQueue, "I think I'm full");
-	
-	DequeueString(testQueue);//1
-	DequeueString(testQueue);//2
-	DequeueString(testQueue);//3
-	DequeueString(testQueue);//4
-	DequeueString(testQueue);//5
-	DequeueString(testQueue);//6
-	DequeueString(testQueue);//7
-	DequeueString(testQueue);//8
-	DequeueString(testQueue);//9
-	DequeueString(testQueue);//10
-	
-	// queue empty message
-	DequeueString(testQueue);
-}
-
-//int main(int argc, char *argv[]){
+// This is the main method which creates the queues for each 
+// function, creates the pthreads for each function, joins 
+// them at the end, and prints queue statistics
+// 
+// @returns N/A
 int main(){
-	// create queue
-	
-	// lock the threads
 
+	// create each queue
+	Queue *readerToMunch1Queue = CreateStringQueue(QUEUE_SIZE);
+	if (readerToMunch1Queue == NULL){
+		fprintf(stderr, "Error unable to create queue\n");
+		return -1;
+	}
+	Queue *munch1ToMunch2Queue = CreateStringQueue(QUEUE_SIZE);
+	if (munch1ToMunch2Queue == NULL){
+		fprintf(stderr, "Error unable to create queue\n");
+		return -1;
+	}
+	Queue *munch2ToWriterQueue = CreateStringQueue(QUEUE_SIZE);
+	if (munch2ToWriterQueue == NULL){
+		fprintf(stderr, "Error unable to create queue\n");
+		return -1;
+	}
+	
+	void *queues[3];
+	queues[0] = readerToMunch1Queue;
+	queues[1] = munch1ToMunch2Queue;
+	queues[2] = munch2ToWriterQueue;
+	
+	// create the threads
+	pthread_t readerThread;
+	pthread_t munch1Thread;
+	pthread_t munch2Thread;
+	pthread_t writerThread;
+	
+	// creates the thread for each module
+	if(pthread_create(&readerThread, NULL, readInStrings, queues)){
+		fprintf(stderr, "Error creating Reader thread.\n");
+		return -1;
+	}
+	
+	if(pthread_create(&munch1Thread, NULL, munch1Strings, queues)){
+		fprintf(stderr, "Error creating Munch1 thread.\n");
+		return -1;
+	}
+	
+	if(pthread_create(&munch2Thread, NULL, munch2Strings, queues)){
+		fprintf(stderr, "Error creating Munch2 thread.\n");
+		return -1;
+	}
+	
+	if(pthread_create(&writerThread, NULL, writeOutStrings, queues)){
+		fprintf(stderr, "Error creating Writer thread.\n");
+		return -1;
+	}
+	
+	// joins all of the threads
+	if(pthread_join(readerThread, NULL)) {
+		fprintf(stderr, "Error: couldn't join readerThread.");
+		return -1;	
+		}
+	
+	if(pthread_join(munch1Thread, NULL)) {
+		fprintf(stderr, "Error: couldn't join munch1Thread.");
+		return -1;	
+		}
+	
+	if(pthread_join(munch2Thread, NULL)) {
+		fprintf(stderr, "Error: couldn't join munch2Thread.");
+		return -1;	
+		}
+	
+	if(pthread_join(writerThread, NULL)) {
+		fprintf(stderr, "Error: couldn't join writerThread.");
+		return -1;
+	}
 
 	// TEST QUEUE
-	Queue *testQueue = CreateStringQueue(QUEUE_SIZE);
-	testQueueFunctionality(testQueue);
-	
-	
-	PrintQueueStats(testQueue);
+	fprintf(stderr, "\nQUEUE 1 STATS\n");
+	PrintQueueStats(queues[0]);
+	fprintf(stderr, "\nQUEUE 2 STATS\n");
+	PrintQueueStats(queues[1]);
+	fprintf(stderr, "\nQUEUE 3 STATS\n");
+	PrintQueueStats(queues[2]);
+
+	// destroy the semaphores
+	for(int i = 0; i < QUEUE_SIZE; i++){
+		Queue **queue = (Queue **) queues;
+		sem_destroy(&queue[i]->enqueueReady);
+		sem_destroy(&queue[i]->dequeueReady);
+		sem_destroy(&queue[i]->mutex);
+	}
 }
